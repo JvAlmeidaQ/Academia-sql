@@ -7,7 +7,7 @@ AFTER INSERT ON Assinaturas
 FOR EACH ROW
 BEGIN
         DECLARE var_valor_plano DECIMAL(10,2);
-        DECLARE var_dia_pag INT,
+        DECLARE var_dia_pag INT;
         DECLARE var_data_base DATE;
         DECLARE var_data_venc DATE;
 
@@ -19,15 +19,15 @@ BEGIN
             WHERE id_plano = NEW.id_plano;
 
 
-            SELECT DAY(data_pag)
+            SELECT dia_pag
             INTO var_dia_pag
             FROM Clientes
             WHERE id_cliente = NEW.id_cliente;
 
-            SET var_data_base = STR_TO_DATE(
-                    CONCAT(YEAR(CURDATE()), '-'. MONTH(CURDATE()), '-', var_dia_pag),
-                    '%Y-%m-%d'
-                );
+            SET var_data_base = STR_TO_DATE (
+                CONCAT(YEAR(CURDATE()), '-', MONTH(CURDATE()), '-', var_dia_pag),
+                '%Y-%m-%d'
+            );
             
             IF var_data_base < CURDATE() THEN
                 SET var_data_base = DATE_ADD(var_data_base, INTERVAL 1 MONTH);
@@ -35,29 +35,37 @@ BEGIN
 
             SET var_data_venc = var_data_base;
        
-            INSERT INTO Faturas VALUES
-            (NULL,var_valor_plano,var_data_venc,'Pendente', NEW.id_assinatura)
+            INSERT INTO Faturas
+            (id_fatura, valor_fatura, data_venc, status, id_assinatura)
+            VALUES
+            (NULL,var_valor_plano,var_data_venc,'Pendente', NEW.id_assinatura);
 
     END IF;
 
 END
 $
 
-/*
-CREATE TRIGGER TRG_Calcula_Datas_Assinatura 
+
+CREATE TRIGGER TRG_Calcula_Fim_Assinatura 
 BEFORE INSERT ON Assinaturas
 FOR EACH ROW
 BEGIN
     
+    DECLARE var_duracao_plano INT;
+
+    SELECT duracao_plano
+    INTO var_duracao_plano
+    FROM Planos
+    WHERE id_plano = NEW.id_plano;
+
     IF NEW.data_fim IS NULL THEN
-        -- Aqui você busca a duração do plano e soma
         SET NEW.data_fim = DATE_ADD(
-            NEW.data_inicio, INTERVAL (SELECT duracao_plano FROM Planos WHERE id_plano = NEW.id_plano) DAY
-            );
+            NEW.data_inicio, INTERVAL var_duracao_plano DAY
+        );
     END IF;
 END 
 $
-*/
+
 
 CREATE TRIGGER TRG_Registra_Historico
 AFTER UPDATE ON Assinaturas
@@ -65,6 +73,7 @@ FOR EACH ROW
 BEGIN
     DECLARE var_valor_old_plano, 
             var_valor_new_plano DECIMAL(10,2);
+            
     DECLARE var_plano_old, var_plano_new VARCHAR(100);
     DECLARE frase VARCHAR(255);
 
@@ -98,7 +107,8 @@ BEGIN
             plano_antigo,
             plano_novo,
             id_plano,
-            id_cliente
+            id_cliente,
+            id_assinatura
         ) 
         VALUES(
                 NULL,
@@ -108,7 +118,8 @@ BEGIN
                 var_plano_old,
                 var_plano_new,
                 OLD.id_plano,
-                OLD.id_cliente
+                NEW.id_cliente,
+                OLD.id_assinatura
             );
     END IF;
 END
