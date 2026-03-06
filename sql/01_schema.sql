@@ -2,7 +2,7 @@ CREATE DATABASE Academia_FitFlow;
 
 USE Academia_FitFlow;
 
-CREATE TABLE Endereco(
+CREATE TABLE IF NOT EXISTS Endereco(
     id_endereco INT AUTO_INCREMENT,
     rua VARCHAR(30) NOT NULL,
     numero VARCHAR(10) NOT NULL,
@@ -15,7 +15,7 @@ CREATE TABLE Endereco(
     CONSTRAINT PK_Endereco PRIMARY KEY(id_endereco)
 );
 
-CREATE TABLE Unidades(
+CREATE TABLE IF NOT EXISTS Unidades(
     id_unidade INT AUTO_INCREMENT,
     cnpj CHAR(14) NOT NULL UNIQUE,
     nome_unidade VARCHAR(100) NOT NULL,
@@ -30,13 +30,14 @@ CREATE TABLE Unidades(
     CONSTRAINT CK_tam_cnpj CHECK (LENGTH(cnpj) = 14)
 );
 
-CREATE TABLE Clientes(
+CREATE TABLE IF NOT EXISTS Clientes(
     id_cliente INT AUTO_INCREMENT,
     cpf CHAR(11) NOT NULL UNIQUE,
     nome VARCHAR(100) NOT NULL,
     sexo ENUM('M','F') NOT NULL,
     data_nasc DATE NOT NULL,
     dia_pag INT NOT NULL,
+    status ENUM('Ativo','Inativo','Bloqueado','Prospect') DEFAULT 'Prospect',
     id_endereco INT NOT NULL UNIQUE,
     id_unidade INT NOT NULL,
 
@@ -49,22 +50,48 @@ CREATE TABLE Clientes(
     FOREIGN KEY(id_unidade) REFERENCES Unidades(id_unidade)
 );
 
-CREATE TABLE Planos(
+CREATE TABLE IF NOT EXISTS Telefone(
+    id_telefone INT AUTO_INCREMENT,
+    ddd CHAR(3) NOT NULL,
+    numero VARCHAR(15) NOT NULL,
+    tipo_telefone ENUM('Comercial','Celular','Residencial') NOT NULL,
+    id_cliente INT,
+    id_unidade INT,
+
+    CONSTRAINT PK_Telefone PRIMARY KEY(id_telefone),
+
+    CONSTRAINT FK_Unidade_Telefone
+    FOREIGN KEY(id_unidade) REFERENCES Unidades(id_unidade),
+
+    CONSTRAINT FK_Cliente_Telefone
+    FOREIGN KEY(id_cliente) REFERENCES Clientes(id_cliente),
+
+    CONSTRAINT CK_tam_ddd CHECK (LENGTH(ddd) > 2),
+    CONSTRAINT CK_tam_numero CHECK (LENGTH(numero) >= 8)
+);
+
+CREATE TABLE IF NOT EXISTS Planos(
     id_plano INT AUTO_INCREMENT,
     nome_plano VARCHAR(50) NOT NULL,
     duracao_plano INT NOT NULL,
     valor_mensal DECIMAL(10,2) NOT NULL,
-    id_unidade INT NOT NULL,
 
     CONSTRAINT PK_Planos PRIMARY KEY(id_plano),
-
-    CONSTRAINT FK_Unidades_Planos
-    FOREIGN KEY(id_unidade) REFERENCES Unidades(id_unidade),
 
     CONSTRAINT CHK_preco_plano CHECK (valor_mensal > 0)
 );
 
-CREATE TABLE Assinaturas(
+CREATE TABLE IF NOT EXISTS Unidade_Planos(
+    id_unidade INT NOT NULL,
+    id_plano INT NOT NULL,
+
+    CONSTRAINT PK_Unidade_Plano PRIMARY KEY(id_unidade,id_plano),
+
+    CONSTRAINT FK_Unidade_Link FOREIGN KEY (id_unidade) REFERENCES Unidades(id_unidade),
+    CONSTRAINT FK_Plano_Link FOREIGN KEY (id_plano) REFERENCES Planos(id_plano)
+);
+
+CREATE TABLE IF NOT EXISTS Assinaturas(
     id_assinatura INT AUTO_INCREMENT,
     data_inicio DATE NOT NULL,
     data_fim DATE, 
@@ -81,7 +108,7 @@ CREATE TABLE Assinaturas(
     FOREIGN KEY(id_cliente) REFERENCES Clientes(id_cliente)
 );
 
-CREATE TABLE Faturas(
+CREATE TABLE IF NOT EXISTS Faturas(
     id_fatura INT AUTO_INCREMENT ,
     valor_fatura DECIMAL(10,2) NOT NULL,
     data_venc DATE NOT NULL,
@@ -94,7 +121,7 @@ CREATE TABLE Faturas(
     FOREIGN KEY(id_assinatura) REFERENCES Assinaturas(id_assinatura)
 );
 
-CREATE TABLE Historico(
+CREATE TABLE IF NOT EXISTS Historico(
     id_historico INT AUTO_INCREMENT,
     desc_mudanca VARCHAR(255) NOT NULL,
     valor_antigo DECIMAL(10,2) NOT NULL,
@@ -117,7 +144,16 @@ CREATE TABLE Historico(
     FOREIGN KEY(id_assinatura) REFERENCES Assinaturas(id_assinatura)
 );
 
-CREATE TABLE Log_Eventos(
+CREATE TABLE IF NOT EXISTS Log_Erros (
+    id_log_erro INT AUTO_INCREMENT PRIMARY KEY,
+    origem VARCHAR(100) NOT NULL,
+    sql_state CHAR(5),
+    errno INT,
+    mensagem_erro TEXT,
+    data_erro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS Log_Eventos(
     id_log INT AUTO_INCREMENT PRIMARY KEY,
     evento VARCHAR(100) NOT NULL,
     detalhes VARCHAR(100) NOT NULL,
