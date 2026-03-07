@@ -95,9 +95,12 @@ BEGIN
                 ELSE 'Atualização de dados cadastrais'
             END
         );
-        
-        INSERT INTO Historico( desc_mudanca, id_plano_antigo, id_plano_novo, id_cliente, id_assinatura) 
-        VALUES(frase, OLD.id_plano, NEW.id_plano, NEW.id_cliente, OLD.id_assinatura );
+
+        IF OLD.data_fim != NEW.data_fim THEN
+            INSERT INTO Historico( desc_mudanca, id_plano_antigo, id_plano_novo, data_mudança, id_cliente, id_assinatura) 
+            VALUES(frase, OLD.id_plano, NEW.id_plano, CURDATE(), NEW.id_cliente, OLD.id_assinatura );
+        END IF;
+
     ELSE
         SIGNAL SQLSTATE '45000' 
         SET MESSAGE_TEXT = 'Erro na Trigger TRG_Registra_Historico: Falha ao inserir historico.';

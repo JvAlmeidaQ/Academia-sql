@@ -107,6 +107,7 @@ SELECT * FROM (
         ON F.id_assinatura = A.id_assinatura 
     WHERE C.status = 'Ativo'
       AND A.status IN ('ATIVA','PAUSADA')
+      AND F.status = 'Pago'
     GROUP BY C.id_cliente, C.nome
 ) AS Ranking_VIP
 WHERE Porcentagem = 1;
@@ -157,7 +158,75 @@ GROUP BY U.nome_unidade;
 
 /* Querys de Historico */
 
+-- 1. Timeline Historico
+SELECT 
+    C.id_cliente,
+    C.nome,
+    A.data_inicio AS 'inicio_Plano',
+    A.data_fim AS 'Fim_do_Plano',
+    H.data_mudança,
+    H.desc_mudanca,
+    P_A.nome_plano AS 'Plano_Antigo',
+    P_N.nome_plano AS 'Plano_Novo'
+FROM Historico H
+INNER JOIN Clientes C
+    ON H.id_cliente = C.id_cliente
+INNER JOIN Assinaturas A
+    ON A.id_assinatura = H.id_assinatura
+INNER JOIN Planos P_A
+    ON P_A.id_plano = H.id_plano_antigo
+INNER JOIN Planos P_N
+    ON P_N.id_plano = H.id_plano_novo
+ORDER BY C.id_cliente;
+
+-- 1. Quem são os clientes indecisos
 SELECT
-        H.plano_antigo,
-        H.plano_novo,
-        H.desc_mudanca,
+    C.id_cliente,
+    C.nome,
+    P_A.nome_plano AS 'Plano_Antigo',
+    P_N.nome_plano AS 'Plano_Novo',
+    H.desc_mudanca,
+    H.data_mudança
+FROM Historico H
+INNER JOIN Planos P_A
+    ON P_A.id_plano = H.id_plano_antigo
+INNER JOIN Planos P_N
+    ON P_N.id_plano = H.id_plano_novo
+INNER JOIN Clientes C
+    ON H.id_cliente = C.id_cliente
+WHERE H.id_cliente IN (
+    SELECT id_cliente
+    FROM Historico
+    GROUP BY id_cliente
+    HAVING COUNT(C.id_cliente) > 2
+)
+ORDER BY H.id_cliente, H.data_mudança;
+
+-- 2. Trocas de Plano
+SELECT
+        P_A.nome_plano AS 'Plano_Antigo',
+        P_N.nome_plano AS 'Plano_Novo',
+        COUNT(*) AS 'Total__Mudanças_Plano'
+FROM Historico H
+INNER JOIN Assinaturas A
+    ON A.id_assinatura = H.id_assinatura
+INNER JOIN Planos P_A
+    ON P_A.id_plano = H.id_plano_antigo
+INNER JOIN Planos P_N
+    ON P_N.id_plano = H.id_plano_novo
+INNER JOIN Clientes C
+    ON C.id_cliente = H.id_cliente
+WHERE H.id_plano_antigo != H.id_plano_novo
+GROUP BY H.id_plano_antigo, H.id_plano_novo;
+
+-- 3. Eficácia de venda
+SELECT
+    P_A.nome_plano AS 'Plano_Antigo',
+    P_N.nome_plano AS 'Plano_Novo',
+    H.desc_mudanca,
+    (P_A.valor_mensal - P_N.valor_mensal) AS 'Diferença_Financeira'
+FROM Historico H
+INNER JOIN Planos P_A
+    ON P_A.id_plano = H.id_plano_antigo
+INNER JOIN Planos P_N
+    ON P_N.id_plano = H.id_plano_novo;
