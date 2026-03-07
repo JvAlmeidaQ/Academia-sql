@@ -1,4 +1,3 @@
-USE Academia_FitFlow;
 
 DELIMITER $
 
@@ -6,15 +5,17 @@ CREATE TRIGGER IF NOT EXISTS TRG_Gerar_Fatura
 AFTER INSERT ON Assinaturas
 FOR EACH ROW
 BEGIN
-        DECLARE var_valor_plano DECIMAL(10,2);
+        DECLARE var_valor_mensal DECIMAL(10,2);
+        DECLARE var_duracao_plano_meses INT;
         DECLARE var_dia_pag INT;
         DECLARE var_data_base DATE;
         DECLARE var_data_venc DATE;
+        DECLARE var_i INT DEFAULT 0;
 
         IF NEW.status = 'ATIVA' THEN
 
-            SELECT valor_mensal 
-            INTO var_valor_plano
+            SELECT valor_mensal, duracao_plano_meses
+            INTO var_valor_mensal, var_duracao_plano_meses
             FROM Planos
             WHERE id_plano = NEW.id_plano;
 
@@ -33,16 +34,22 @@ BEGIN
                 SET var_data_base = DATE_ADD(var_data_base, INTERVAL 1 MONTH);
             END IF;
 
-            SET var_data_venc = var_data_base;
-       
-            INSERT INTO Faturas
-            (id_fatura, valor_fatura, data_venc, status, id_assinatura)
-            VALUES
-            (NULL,var_valor_plano,var_data_venc,'Pendente', NEW.id_assinatura);
+            WHILE var_i < var_duracao_plano_meses DO
+
+                SET var_data_venc = DATE_ADD(var_data_base, INTERVAL var_i MONTH);
+        
+                INSERT INTO Faturas
+                (valor_fatura, data_venc, status, id_assinatura)
+                VALUES
+                (var_valor_mensal,var_data_venc,'Pendente', NEW.id_assinatura);
+
+                SET var_i = var_i + 1;
+            END WHILE;
+
         ELSE
             SIGNAL SQLSTATE '45000' 
-            SET MESSAGE_TEXT = 'Erro na Trigger TRG_Registra_Historico: Falha ao inserir histórico.'; 
-    END IF;
+            SET MESSAGE_TEXT = 'Erro: Apenas assinaturas ATIVAS geram faturas automaticamente.';
+        END IF;
 
 END
 $
@@ -53,16 +60,16 @@ BEFORE INSERT ON Assinaturas
 FOR EACH ROW
 BEGIN
     
-    DECLARE var_duracao_plano INT;
+    DECLARE var_duracao_plano_meses INT;
 
-    SELECT duracao_plano
-    INTO var_duracao_plano
+    SELECT duracao_plano_meses
+    INTO var_duracao_plano_meses
     FROM Planos
     WHERE id_plano = NEW.id_plano;
 
     IF NEW.data_fim IS NULL THEN
         SET NEW.data_fim = DATE_ADD(
-            NEW.data_inicio, INTERVAL var_duracao_plano DAY
+            NEW.data_inicio, INTERVAL var_duracao_plano_meses MONTH
         );
     ELSE
         SIGNAL SQLSTATE '45000' 
@@ -132,3 +139,5 @@ BEGIN
     END IF;
 END
 $
+
+DELIMITER ;

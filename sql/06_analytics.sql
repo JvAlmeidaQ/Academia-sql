@@ -7,12 +7,14 @@ SELECT C.nome, E.cidade, E.bairro
 FROM Clientes C
 INNER JOIN Endereco E
     ON C.id_endereco = E.id_endereco
-WHERE C.status = 'Ativo';
+WHERE C.status = 'Ativo'
+ORDER BY E.cidade;
 
 -- 2. Visão de Receita de Curto Prazo
 SELECT F.status, F.valor_fatura, F.data_venc
 FROM Faturas F
-WHERE F.data_venc >= CURDATE() AND F.status = 'Pendente'
+WHERE F.status = 'Pendente'
+    AND F.data_venc BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
 ORDER BY data_venc;
 
 -- 3. Clientes que estão com faturas para vencer nos proximos dias
@@ -25,13 +27,13 @@ FROM Faturas F
 INNER JOIN Assinaturas A
     ON F.id_assinatura = A.id_assinatura
 INNER JOIN Clientes C 
-    ON C.id_cliente = A.id_assinatura
+    ON C.id_cliente = A.id_cliente
 INNER JOIN Unidades U
     ON U.id_unidade = C.id_unidade
 INNER JOIN Planos P
     ON P.id_plano = A.id_plano
 WHERE 
-    F.data_venc >= CURDATE() 
+    F.data_venc BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
     AND 
     F.status = 'Pendente'
 ORDER BY data_venc;
@@ -111,8 +113,8 @@ WHERE Porcentagem = 1;
 
 
 -- 3. Dashboard Executivo (View)
-
-CREATE VIEW IF NOT EXISTS VW_Detalhes_Operacionais AS
+DROP VIEW IF EXISTS VW_Detalhes_Operacionais;
+CREATE VIEW VW_Detalhes_Operacionais AS
 SELECT
         C.nome,
         C.status AS status_cliente,
@@ -134,8 +136,8 @@ WHERE C.status = 'Ativo'
       AND A.status IN ('ATIVA','PAUSADA') 
       OR (A.status = 'CANCELADA' AND A.data_fim >= DATE_SUB(CURDATE(), INTERVAL 30 DAY));
 
-
-CREATE VIEW IF NOT EXISTS VW_Dashboard AS
+DROP VIEW IF EXISTS VW_Dashboard;
+CREATE VIEW VW_Dashboard AS
 SELECT 
         U.nome_unidade,
         SUM(CASE WHEN F.status = 'Pago' THEN F.valor_fatura ELSE 0 END) AS faturamento_total,
@@ -151,3 +153,11 @@ INNER JOIN Assinaturas A
 INNER JOIN Faturas F 
     ON F.id_assinatura = A.id_assinatura
 GROUP BY U.nome_unidade;
+
+
+/* Querys de Historico */
+
+SELECT
+        H.plano_antigo,
+        H.plano_novo,
+        H.desc_mudanca,
