@@ -1,6 +1,3 @@
-CREATE DATABASE Academia_FitFlow;
-
-USE Academia_FitFlow;
 
 CREATE TABLE IF NOT EXISTS Endereco(
     id_endereco INT AUTO_INCREMENT,
@@ -73,7 +70,7 @@ CREATE TABLE IF NOT EXISTS Telefone(
 CREATE TABLE IF NOT EXISTS Planos(
     id_plano INT AUTO_INCREMENT,
     nome_plano VARCHAR(50) NOT NULL,
-    duracao_plano INT NOT NULL,
+    duracao_plano_meses INT NOT NULL,
     valor_mensal DECIMAL(10,2) NOT NULL,
 
     CONSTRAINT PK_Planos PRIMARY KEY(id_plano),
@@ -123,19 +120,14 @@ CREATE TABLE IF NOT EXISTS Faturas(
 
 CREATE TABLE IF NOT EXISTS Historico(
     id_historico INT AUTO_INCREMENT,
-    desc_mudanca VARCHAR(255) NOT NULL,
-    valor_antigo DECIMAL(10,2) NOT NULL,
-    valor_novo DECIMAL(10,2) NOT NULL,
-    plano_antigo VARCHAR(100) NOT NULL,
-    plano_novo VARCHAR(100) NOT NULL,
-    id_plano INT NOT NULL,
+    desc_mudanca VARCHAR(150),
+    id_plano_antigo INT NULL,
+    id_plano_novo INT NULL,
+    data_mudança DATETIME DEFAULT CURRENT_TIMESTAMP,
     id_cliente INT NOT NULL,
     id_assinatura INT NULL,
 
     CONSTRAINT PK_Historico PRIMARY KEY(id_historico),
-
-    CONSTRAINT FK_Planos_Historico
-    FOREIGN KEY(id_plano) REFERENCES Planos(id_plano),
 
     CONSTRAINT FK_Cliente_Historico
     FOREIGN KEY(id_cliente) REFERENCES Clientes(id_cliente),

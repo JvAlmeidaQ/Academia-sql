@@ -82,60 +82,25 @@ $
 CREATE TRIGGER IF NOT EXISTS TRG_Registra_Historico
 AFTER UPDATE ON Assinaturas
 FOR EACH ROW
-BEGIN
-    DECLARE var_valor_old_plano, 
-            var_valor_new_plano DECIMAL(10,2);
-            
-    DECLARE var_plano_old, var_plano_new VARCHAR(100);
+BEGIN        
     DECLARE frase VARCHAR(255);
 
     IF OLD.status != NEW.status OR OLD.id_plano != NEW.id_plano THEN
 
-        SET frase = CONCAT(
-            'A matricula foi ',
-            CASE NEW.status
-                WHEN 'Ativa' THEN 'ativada com sucesso'
-                WHEN 'Pausada' THEN 'temporariamente trancada'
-                WHEN 'Cancelada' THEN 'cancelada'
-                ELSE 'atualizada'
+         SET frase = CONCAT(
+            'Assinatura ', NEW.id_assinatura, ': ',
+            CASE 
+                WHEN OLD.status != NEW.status THEN CONCAT('Status alterado de ', OLD.status, ' para ', NEW.status)
+                WHEN OLD.id_plano != NEW.id_plano THEN 'Mudança de plano efetuada'
+                ELSE 'Atualização de dados cadastrais'
             END
         );
-
-        SELECT valor_mensal, nome_plano 
-                INTO var_valor_old_plano, var_plano_old
-                FROM Planos
-                WHERE id_plano = OLD.id_plano;
-
-        SELECT valor_mensal, nome_plano
-            INTO var_valor_new_plano, var_plano_new
-            FROM Planos
-            WHERE id_plano = NEW.id_plano;
-
-        INSERT INTO Historico(
-            id_historico,
-            desc_mudanca,
-            valor_antigo,
-            valor_novo,
-            plano_antigo,
-            plano_novo,
-            id_plano,
-            id_cliente,
-            id_assinatura
-        ) 
-        VALUES(
-                NULL,
-                frase,
-                var_valor_old_plano,
-                var_valor_new_plano,
-                var_plano_old,
-                var_plano_new,
-                OLD.id_plano,
-                NEW.id_cliente,
-                OLD.id_assinatura
-            );
+        
+        INSERT INTO Historico( desc_mudanca, id_plano_antigo, id_plano_novo, id_cliente, id_assinatura) 
+        VALUES(frase, OLD.id_plano, NEW.id_plano, NEW.id_cliente, OLD.id_assinatura );
     ELSE
         SIGNAL SQLSTATE '45000' 
-        SET MESSAGE_TEXT = 'Erro na Trigger TRG_Registra_Historico: Falha ao inserir histórico.';
+        SET MESSAGE_TEXT = 'Erro na Trigger TRG_Registra_Historico: Falha ao inserir historico.';
     END IF;
 END
 $
