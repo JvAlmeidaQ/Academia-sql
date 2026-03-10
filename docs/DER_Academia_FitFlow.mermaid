@@ -1,0 +1,115 @@
+erDiagram
+
+    ENDERECO {
+        INT id_endereco PK
+        VARCHAR rua
+        VARCHAR numero
+        VARCHAR bairro
+        VARCHAR cidade
+        CHAR estado
+        CHAR cep
+        VARCHAR complemento
+    }
+
+    UNIDADES {
+        INT id_unidade PK
+        CHAR cnpj
+        VARCHAR nome_unidade
+        VARCHAR email
+        INT id_endereco FK
+    }
+
+    CLIENTES {
+        INT id_cliente PK
+        CHAR cpf
+        VARCHAR nome
+        ENUM sexo
+        DATE data_nasc
+        INT dia_pag
+        ENUM status
+        INT id_endereco FK
+        INT id_unidade FK
+    }
+
+    TELEFONE {
+        INT id_telefone PK
+        CHAR ddd
+        VARCHAR numero
+        ENUM tipo_telefone
+        INT id_cliente FK
+        INT id_unidade FK
+    }
+
+    PLANOS {
+        INT id_plano PK
+        VARCHAR nome_plano
+        INT duracao_plano_meses
+        DECIMAL valor_mensal
+    }
+
+    UNIDADE_PLANOS {
+        INT id_unidade PK, FK
+        INT id_plano PK, FK
+    }
+
+    ASSINATURAS {
+        INT id_assinatura PK
+        DATE data_inicio
+        DATE data_fim
+        ENUM status
+        INT id_plano FK
+        INT id_cliente FK
+    }
+
+    FATURAS {
+        INT id_fatura PK
+        DECIMAL valor_fatura
+        DATE data_venc
+        ENUM status
+        INT id_assinatura FK
+    }
+
+    HISTORICO {
+        INT id_historico PK
+        VARCHAR desc_mudanca
+        INT id_plano_antigo
+        INT id_plano_novo
+        DATETIME data_mudanca
+        INT id_cliente FK
+        INT id_assinatura FK
+    }
+
+    LOG_ERROS {
+        INT id_log_erro PK
+        VARCHAR origem
+        CHAR sql_state
+        INT errno
+        TEXT mensagem_erro
+        TIMESTAMP data_erro
+    }
+
+    LOG_EVENTOS {
+        INT id_log PK
+        VARCHAR evento
+        VARCHAR detalhes
+        TIMESTAMP data_evento
+    }
+
+
+    ENDERECO ||--|| UNIDADES : possui
+    ENDERECO ||--|| CLIENTES : possui
+
+    UNIDADES ||--o{ CLIENTES : atende
+    UNIDADES ||--o{ TELEFONE : possui
+
+    CLIENTES ||--o{ TELEFONE : possui
+    CLIENTES ||--o{ ASSINATURAS : faz
+    CLIENTES ||--o{ HISTORICO : gera
+
+    PLANOS ||--o{ ASSINATURAS : pertence
+    ASSINATURAS ||--o{ FATURAS : gera
+
+    UNIDADES ||--o{ UNIDADE_PLANOS : oferece
+    PLANOS ||--o{ UNIDADE_PLANOS : disponivel
+
+    ASSINATURAS ||--o{ HISTORICO : registra
